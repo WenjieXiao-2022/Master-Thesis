@@ -1,0 +1,37 @@
+
+
+This section covers the preliminary concepts and assumptions used in this thesis, based on the DICG and Boscia papers.
+
+\begin{definition}[Strongly convex function]
+	A differentiable function \( f : \mathcal{X} \to \mathbb{R} \) is \( \mu\)-strongly convex if 
+	\[
+	f(y) - f(x) \geq \langle \nabla f(x), y - x \rangle + \frac{\mu}{2} \| y - x \|^2 \quad \text{for all } x, y \in \mathcal{X}.
+	\]
+\end{definition}
+
+\begin{definition}[Smooth function]
+	A differentiable function \( f : \mathcal{X} \to \mathbb{R} \) is  L-smooth convex if 
+	\[
+	f(y) - f(x) \geq \langle \nabla f(x), y - x \rangle + \frac{\L}{2} \| y - x \|^2 \quad \text{for all } x, y \in \mathcal{X}.
+	\]
+\end{definition}
+
+\subsection{Assumptions from Boscia Paper}
+The Boscia framework makes the following assumptions:
+
+
+
+\subsection{Problem Setting}
+Throughout this paper, we use \( \| \cdot \| \) to denote the Euclidean norm and we consider the optimization problem
+
+\[
+\min_{x \in \mathcal{P}} f(x),
+\]
+
+where we have following assumptions:\
+\begin{enumerate}
+	\item \(f(x)\) is \(\alpha\)-strong and \(\beta\)-smooth convex function with respect to the Euclidean norm.
+	\item \(\mathcal{P}\) is a polytope with all vertices lying on the hypercube \( \{0, 1\}^n \).
+	\item \(\mathcal{P}\) can be algebraically described as \(P = \{ x \in \mathbb{R}^n \mid x \geq 0, \, Ax = b \}. \)
+\end{enumerate}
+

@@ -1,21 +1,58 @@
-\documentclass{article}
+\documentclass[12pt]{article}
+\usepackage{graphicx}
+\usepackage{natbib}
+\usepackage{amsmath}
+\usepackage{appendix}
+\usepackage{hyperref}
+\usepackage{amsthm}
+\usepackage{amssymb}
+
+% Define the 'definition' environment
+\newtheorem{definition}{Definition}
+
+\title{Decomposition-Invariant Conditional Gradient Method in Boscia Framework}
+\author{Your Name}
+\date{Month Year}
 
 \begin{document}
 	
-	\title{My First LaTeX Document}
-	\author{Your Name}
-	\date{\today}
 	\maketitle
 	
+	\begin{abstract}
+		Your abstract goes here.
+	\end{abstract}
+	
+	\section*{Acknowledgments}
+	Your acknowledgments go here.
+	
+	\tableofcontents
+	\listoffigures
+	\listoftables
+	
 	\section{Introduction}
+	\input{chapters/introduction.tex}
 	
-	This is my first document written in \LaTeX.
+	\section{Preliminaries}
+	\input{chapters/preliminaries.tex}
 	
-	\section{Mathematics}
+	\section{Framwork}
+	\input{chapters/framwork.tex}
 	
-	Here is an example of an equation:
-	\begin{equation}
-		E = mc^2
-	\end{equation}
+	\section{Experiment}
+	\input{chapters/experiment.tex}
+	
+	\section{Discussion}
+	\input{chapters/discussion.tex}
+	
+	\section{Conclusion}
+	\input{chapters/conclusion.tex}
+	
+	\bibliographystyle{plain}
+	\bibliography{references}
+	
+	\begin{appendices}
+		\section{Appendix A}
+		\input{appendices/appendix_a.tex}
+	\end{appendices}
 	
 \end{document}
