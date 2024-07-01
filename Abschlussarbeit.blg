@@ -1,0 +1,56 @@
+This is BibTeX, Version 0.99d
+Capacity: max_strings=200000, hash_size=200000, hash_prime=170003
+The top-level auxiliary file: Abschlussarbeit.aux
+Reallocating 'name_of_file' (item size: 1) to 21 items.
+A level-1 auxiliary file: ./misc/titlepage.aux
+Reallocating 'name_of_file' (item size: 1) to 26 items.
+A level-1 auxiliary file: ./misc/self-assertion.aux
+Reallocating 'name_of_file' (item size: 1) to 20 items.
+A level-1 auxiliary file: ./misc/abstract.aux
+Reallocating 'name_of_file' (item size: 1) to 23 items.
+A level-1 auxiliary file: ./misc/abstract_de.aux
+Reallocating 'name_of_file' (item size: 1) to 9 items.
+The style file: geralpha.bst
+Reallocating 'name_of_file' (item size: 1) to 13 items.
+Database file #1: ./bib/manual.bib
+You've used 5 entries,
+            2768 wiz_defined-function locations,
+            631 strings with 5683 characters,
+and the built_in function-call counts, 1746 in all, are:
+= -- 157
+> -- 82
+< -- 4
++ -- 27
+- -- 27
+* -- 127
+:= -- 275
+add.period$ -- 9
+call.type$ -- 5
+change.case$ -- 27
+chr.to.int$ -- 5
+cite$ -- 5
+duplicate$ -- 75
+empty$ -- 147
+format.name$ -- 34
+if$ -- 369
+int.to.chr$ -- 1
+int.to.str$ -- 0
+missing$ -- 2
+newline$ -- 23
+num.names$ -- 15
+pop$ -- 55
+preamble$ -- 1
+purify$ -- 37
+quote$ -- 0
+skip$ -- 68
+stack$ -- 0
+substring$ -- 35
+swap$ -- 21
+text.length$ -- 4
+text.prefix$ -- 3
+top$ -- 0
+type$ -- 36
+warning$ -- 0
+while$ -- 11
+width$ -- 6
+write$ -- 53

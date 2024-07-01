@@ -1,0 +1,158 @@
+\chapter{Framework\label{cha:chapter3}}
+In this section, we outline the workflow for decomposition-invariant based mixed integer convex optimization over structured polytopes. We begin by introducing the Boscia Framework and the decomposition-invariant Frank-Wolfe algorithm, and then provide a detailed description of how these two methods are integrated.
+
+\section{Boscia Framework\label{sec:boscia}}
+The Boscia framework is designed to tackle large-scale mixed integer convex optimization problems by leveraging projection-free Frank Wolfe algorithm. It operates by breaking down a complex optimization problem into smaller, more manageable subproblems that can be solved independently and more efficiently. 
+
+\subsubsection{Overview}
+The Boscia framework provides a solution approach to MINLP, consisting of a branch-and-bound process over the convex hull of the feasible region with inexact node processing. This approach leverages the strengths of both the Frank-Wolfe (FW) algorithm and Mixed-Integer Programming (MIP) techniques to efficiently solve complex optimization problems.
+
+At each node of the branch-and-bound tree, the FW algorithm solves the nonlinear subproblem over the convex hull of integer-feasible solutions, rather than over the continuous relaxation. This is achieved by solving a MIP as the Linear Minimization Oracle (LMO) within the FW process, which results in vertices of the integer hull. This innovative approach allows for stronger relaxations and a reduction in the size of the branch-and-bound tree.
+
+Key features of this approach include:
+\begin{enumerate}
+	\item \textbf{Stronger Relaxations}: Optimizing over the convex hull of integer-feasible solutions instead of weaker continuous relaxations provides stronger relaxations, multiple feasible solutions at each node, and a reduced branch-and-bound tree size. This leads to more accurate and efficient solutions.
+	
+	\item \textbf{Error-Adaptive Solution Process}: The use of a FW-based error-adaptive solution process increases the amount of computation performed for higher accuracies, replacing exact convex solvers. This adaptive approach ensures that computational resources are allocated efficiently based on the required solution accuracy.
+	
+	\item \textbf{Warm-Starting}: Utilizing the active set representation of the solution at each node to warm-start the children iterates reduces the number of MIP solver calls. This technique significantly enhances computational efficiency by leveraging information from previously solved subproblems.
+	
+	\item \textbf{Lazification and Strong Branching}: The framework includes new lazification techniques and strong branching strategies that enhance the performance of the optimization process. Lazification techniques defer the solution of certain subproblems until necessary, while strong branching strategies improve the selection of branching variables.
+	
+	\item \textbf{Tightening Bounds}: Convexity and the FW gap are exploited to tighten bounds at each node, further reducing the search space. This bound tightening process improves the overall efficiency of the branch-and-bound method by reducing the number of nodes that need to be explored.
+\end{enumerate}
+
+This method avoids the issues associated with outer approximation approaches, such as reliance on near-feasible solutions and dense separation constraints, by using nonlinear relaxations and leveraging recent advances in FW and MIP methods to reduce the number of MIP subproblems. Unlike outer approximation methods, this approach maintains feasibility throughout the process and benefits from the flexibility of modern MIP solvers.
+
+Extensive computational results demonstrate the effectiveness of this approach, showing significant improvements in solving large-scale MINLP problems. The Boscia framework is implemented as an open-source Julia package, Boscia.jl, which is available under the MIT license. This implementation allows researchers and practitioners to leverage the framework's capabilities in various applications, further validating its practicality and robustness.
+
+\newpage
+
+\begin{algorithm}[H]
+	\caption{Boscia algorithm for Problem \eqref{1}}
+	\label{alg:boscia}
+	\begin{algorithmic}[1]
+		\REQUIRE Primal-dual tolerance $\delta$, feasible set $\mathcal{X}$ as a boundable LMO, $\mathcal{J}$ the set of integer variables, objective $f$, initial point $v_0$, FW gap tolerance $\{\epsilon_t\}_{t \geq 0}$.
+		\STATE $(l^0, u^0) \gets \text{global\_bounds}(f)$
+		\STATE $\hat{x}^0 \gets v_0$
+		\STATE $\text{UB} \gets f(v_0)$
+		\STATE $\text{LB} \gets f(v_0)$
+		\STATE $g_0 \gets \max_{x \in \mathcal{X}} \langle \nabla f(x_0), x - v_0 \rangle$
+		\STATE $\mathcal{N}_0 \gets \{(l^0, u^0, \mathcal{A}_0, \mathcal{S}_0, g_0, \hat{x}^0) = \varnothing \}$
+		\STATE $\mathcal{N}_t \gets \mathcal{N}_0$
+		\STATE $\text{UB} \gets \min(\text{UB}, \min_{v \in \mathcal{A}_{\mathcal{J} \cup \mathcal{S}}} f(v))$
+		\STATE $\text{LB} \gets f(\hat{x}^0) - g_0$
+		\STATE $t \gets 0$
+		\WHILE {$\text{UB} - \text{LB} > \delta$ and $\mathcal{N}_t \neq \emptyset$} 
+		\STATE $n_t \gets \text{best\_bound\_node}(\mathcal{N}_t)$
+		\STATE $(l^{(t)}, u^{(t)}, \mathcal{A}_t, \mathcal{S}_t, \hat{g}_t, \hat{b}_t) \gets n_t$
+		\STATE $\mathcal{N}_t \gets \mathcal{N}_t \setminus \{n_t\}$
+		\STATE $(\hat{x}^{(t)}, \hat{g}_t, \mathcal{A}_t, \mathcal{S}_t, \mathcal{H}_t) \gets \text{near-optimal\_relaxation\_solve}(l^{(t)}, u^{(t)}, \mathcal{A}_t, \mathcal{S}_t, \text{UB}, \epsilon_t)$
+		\STATE $\text{UB} \gets \min(\text{UB}, \min_{v \in \mathcal{A}_{\mathcal{J} \cup \mathcal{S}} \cup \mathcal{H}} f(v))$
+		\STATE $b_t \gets f(\hat{x}^{(t)}) - \hat{g}_t$
+		\IF {$b_t > \text{UB}$}
+		\STATE prune suboptimal node
+		\ELSIF {$\hat{x}^{(t)} \in \mathcal{X} \cap \mathbb{Z}$}
+		\STATE prune integer point, no further branching
+		\STATE $\text{UB} \gets \min(\text{UB}, f(\hat{x}^{(t)}))$
+		\STATE close node
+		\ELSE
+		\STATE $(l^{(t)}, u^{(t)}) \gets \text{dual\_bound\_tightening}(l^{(t)}, u^{(t)}, \nabla f(\hat{x}^{(t)}), \text{UB}, b_t)$
+		\STATE $j \in \mathcal{J} \gets \arg \max_{j \in \mathcal{J}} |(\hat{x}^{(t)})_j - (\hat{x}^{(t)})_j|$ \COMMENT{find variable to branch on}
+		\STATE $l^j \gets l^j + \epsilon_j \quad \text{and} \quad u^j \gets u^j - \epsilon_j$ \COMMENT{compute bounds for left and right node}
+		\STATE $(l^{(t+1)}, u^{(t+1)}) \gets (l^{(t)}, u^{(t)}) \setminus \{(l^j, u^j)\}$
+		\STATE $\mathcal{A}_t, \mathcal{S}_t, \mathcal{R}_t \gets \text{partition\_vertices}(\mathcal{A}_t, \mathcal{S}_t, j)$
+		\STATE $\mathcal{N}_{t+1} \gets \mathcal{N}_{t} \cup \{n_l, n_r\}$
+		\STATE $(n_l, n_r) \gets (l^{(t)}, u^{(t)}, \mathcal{A}_t, \mathcal{S}_t, b_t)$
+		\ENDIF
+		\STATE $t \gets t + 1$
+		\ENDWHILE
+	\end{algorithmic}
+\end{algorithm}
+
+\newpage
+
+
+\section{Decomposition-Invariant Conditional Gradient(DICG)\label{sec:DICG}}
+
+\subsubsection{Overview}
+Traditional Frank-Wolfe (FW) variants, such as Away Frank-Wolfe and Pairwise Frank-Wolfe, rely heavily on the information from the active set to navigate the optimization landscape. While effective in many scenarios, these methods encounter significant challenges when dealing with high-dimensional spaces, especially when the solution is not sparse. The necessity to store all active set atoms in these cases results in substantial storage demands, which can severely hamper computational efficiency and slow down the overall program execution.
+
+To address this critical limitation, the Decomposition-Invariant Conditional Gradient (DICG) algorithm was proposed. DICG is designed to avoid the need for storing the active set, thereby significantly reducing the required storage space and computational overhead. By eliminating the dependence on the active set, DICG ensures a more efficient optimization process, particularly in high-dimensional settings, thus offering a practical solution to the scalability issues faced by traditional FW variants.
+
+DICG achieves this efficiency through a novel approach that leverages decomposition-invariant properties. This means that the algorithm maintains its performance regardless of how the problem is decomposed into subproblems. Instead of maintaining a growing active set, DICG iteratively refines the solution by focusing on a small, dynamically updated subset of variables. This is accomplished by integrating techniques such as efficient linear minimization oracles (LMOs) and adaptive refinement strategies, which selectively target the most promising directions for improvement.
+
+\subsubsection{Structured Polytopes}
+The Decomposition-Invariant Conditional Gradient (DICG) algorithm is specifically designed to handle optimization problems where the feasible region is a polytope with vertices being in \(\{0, 1\}\). These types of polytopes, often referred to as binary or 0-1 polytopes, are prevalent in many real-world applications and represent a significant class of structured optimization problems.
+
+Binary polytopes arise naturally in various fields, including operations research, computer science, and combinatorial optimization. For instance, in the field of network design, binary polytopes can represent feasible configurations of network links that are either active or inactive. In logistics and supply chain management, they can model the selection of routes or allocation of resources, where each decision variable is binary, indicating whether a particular route or resource is selected.
+
+Examples of such polytopes include:
+\begin{enumerate}
+	\item \textbf{The Hypercube}: A classic example of a 0-1 polytope, the hypercube represents all possible combinations of binary variables. It is fundamental in various optimization problems, including those in coding theory and data analysis.
+	\item \textbf{The Birkhoff Polytope}: This polytope represents all doubly stochastic matrices, where each entry is either 0 or 1. It is widely used in problems related to assignment and matching, such as the assignment problem in operations research.
+	\item \textbf{The Matroid Polytope}: Matroid polytopes model the independent sets of a matroid, which can be used to solve problems in graph theory, such as network flow and spanning tree problems.
+\end{enumerate}
+
+In addition to binary polytopes, simplex-like polytopes also play a crucial role in structured optimization problems. A simplex-like polytope is a generalization of the simplex, which is the convex hull of a set of affinely independent points. These polytopes often arise in problems where the feasible region is defined by convex combinations of certain extreme points.
+
+Examples of simplex-like polytopes include:
+\begin{enumerate}
+	\item \textbf{The Simplex}: The simplest form of a simplex-like polytope, representing the convex hull of \(n+1\) affinely independent points in \(n\)-dimensional space. It is widely used in linear programming and other optimization problems.
+	\item \textbf{The Probability Simplex}: This polytope represents the set of all possible probability distributions over a finite set of outcomes, where each vertex corresponds to a deterministic distribution.
+	\item \textbf{Transportation Polytopes}: These polytopes represent the set of feasible transportation plans in logistics and supply chain optimization problems, where the vertices correspond to extreme transportation plans.
+\end{enumerate}
+
+These structured polytopes, whether binary or simplex-like, pose significant challenges due to the combinatorial explosion of possible vertex configurations as the dimension \(n\) increases. However, DICG's design leverages the structured nature of these polytopes, enabling efficient optimization without the need for extensive storage of the active set. This capability makes DICG a powerful tool for solving high-dimensional and complex optimization problems that involve structured polytopes.
+
+\newpage
+
+\begin{algorithm}[H]
+	\caption{Decomposition-invariant Pairwise Conditional Gradient}
+	\label{alg:dicg}
+	\begin{algorithmic}[1]
+		\REQUIRE Sequence of step-sizes $\{\eta_t\}_{t \geq 1}$
+		\STATE Let $x_0$ be an arbitrary point in $\mathcal{P}$
+		\STATE $x_1 \leftarrow \arg \min_{v \in \mathcal{V}} v \cdot \nabla f(x_0)$
+		\FOR{$t = 1, 2, \ldots$}
+		\STATE $v_t^+ \leftarrow \arg \min_{v \in \mathcal{V}} v \cdot \nabla f(x_t)$
+		\STATE Define the vector $\widetilde{\nabla} f(x_t) \in \mathbb{R}^n$ as follows:
+		\[
+		[\widetilde{\nabla} f(x_t)]_i := 
+		\begin{cases}
+			[\nabla f(x_t)]_i & \text{if } x_t(i) > 0 \\
+			-\infty & \text{if } x_t(i) = 0
+		\end{cases}
+		\]
+		\STATE $v_t^- \leftarrow \arg \min_{v \in \mathcal{V}} (-\widetilde{\nabla} f(x_t))$
+		\STATE Choose a new step-size $\widetilde{\eta}_t$ using one of the following two options:
+		\begin{itemize}
+			\item \textbf{Option 1: predefined step-size}
+			\STATE Let $\delta_t$ be the smallest natural number such that $2^{-\delta_t} \leq \eta_t$, and set a new step-size $\widetilde{\eta}_t \leftarrow 2^{-\delta_t}$
+			\item \textbf{Option 2: line-search}
+			\STATE $\gamma_t \leftarrow \max_{\gamma \in [0, 1]} \{x_t + \gamma (v_t^+ - v_t^-) \geq 0\}$, $\widetilde{\eta}_t \leftarrow \min_{\eta \in (0, \gamma_t]} f(x_t + \eta (v_t^+ - v_t^-))$
+		\end{itemize}
+		\STATE $x_{t+1} \leftarrow x_t + \widetilde{\eta}_t (v_t^+ - v_t^-)$
+		\ENDFOR
+	\end{algorithmic}
+\end{algorithm}
+
+
+\subsection{DICG Step Size}
+
+Since DICG doesn't maintain an explicit convex decomposition, it cannot directly compute the maximum step size as done in Away Frank-Wolfe and Pairwise Frank-Wolfe algorithms. To address this, DICG provides two options for calculating the step size, each with its own advantages and considerations.
+
+The first option is to use a predefined step-size sequence \(\{\eta_t\}\). This sequence should be non-increasing and chosen carefully to account for the sparsity of the optimal solution. By using predefined step sizes, DICG can ensure a consistent and predictable progression towards the optimum. This method is straightforward and computationally efficient, making it suitable for many practical applications. A particularly effective choice for \(\eta_t\) is given by the following formula, which ensures that DICG attains linear convergence:
+
+\[
+\eta_t = \sqrt{\frac{\mu}{16LD^2 \cdot \text{card}(x^*)}} \left( 1 - \frac{\mu}{16LD^2 \cdot \text{card}(x^*)} \right)^{\frac{t-1}{2}}
+\]
+
+where \(\mu\) is the strong convexity parameter, \(L\) is the Lipschitz constant of the gradient, \(D\) is the diameter of the feasible region, and \(\text{card}(x^*)\) denotes the cardinality (number of non-zero elements) of the optimal solution \(x^*\).
+
+The second option is to employ a line search to determine the step size dynamically. While this approach can potentially yield more accurate step sizes by optimizing the progress at each iteration, it naturally introduces additional computational overhead. The line search involves finding the maximum feasible step size \(\gamma_t\) that ensures the updated iterate remains within the feasible region, followed by a minimization over the interval \((0, \gamma_t]\) to select the optimal step size \(\widetilde{\eta}_t\). Although more computationally intensive, the line search can adapt better to the problem's local geometry, potentially improving convergence rates.
+
+By offering these two options, DICG provides flexibility in balancing computational efficiency and optimization accuracy, allowing practitioners to choose the most appropriate method based on their specific problem characteristics and computational resources.
+
+
+
